@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Marksheet</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #1f2937;
+        }
+
+        /* Controls */
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls input,
+        .controls select {
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        .controls button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            font-weight: bold;
+        }
+
+        .controls button:hover {
+            background: #1d4ed8;
+        }
+
+        /* Summary */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .summary-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .summary-card p {
+            font-size: 25px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow-x: auto;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #1f2937;
+            color: white;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Attendance Buttons */
+        .attendance-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .present-btn,
+        .absent-btn {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .present-btn {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .absent-btn {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .present-btn:hover {
+            background: #22c55e;
+            color: white;
+        }
+
+        .absent-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .present-btn.active {
+            background: #16a34a;
+            color: white;
+        }
+
+        .absent-btn.active {
+            background: #dc2626;
+            color: white;
+        }
+
+        /* Status */
+        .status {
+            font-weight: bold;
+        }
+
+        .status.present {
+            color: #16a34a;
+        }
+
+        .status.absent {
+            color: #dc2626;
+        }
+
+        .status.not-marked {
+            color: #777;
+        }
+
+        /* Percentage */
+        .percentage {
+            font-weight: bold;
+        }
+
+        .good {
+            color: #16a34a;
+        }
+
+        .average {
+            color: #d97706;
+        }
+
+        .low {
+            color: #dc2626;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .summary {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls input,
+            .controls select,
+            .controls button {
+                width: 100%;
+            }
+        }
+
+        /* Print */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .controls {
+                display: none;
+            }
+
+            .summary-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .attendance-buttons {
+                display: none;
+            }
+
+            .table-container {
+                box-shadow: none;
+            }
+
+            h1 {
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>📋 Attendance Marksheet</h1>
+
+    <!-- Controls -->
+    <div class="controls">
+
+        <input
+            type="date"
+            id="attendanceDate"
+        >
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search student..."
+            oninput="renderTable()"
+        >
+
+        <select id="filterStatus" onchange="renderTable()">
+            <option value="all">All Students</option>
+            <option value="present">Present</option>
+            <option value="absent">Absent</option>
+            <option value="not-marked">Not Marked</option>
+        </select>
+
+        <button onclick="printAttendance()">
+            🖨️ Print Attendance
+        </button>
+
+        <button onclick="clearTodayAttendance()">
+            🗑️ Clear Today
+        </button>
+
+    </div>
+
+    <!-- Summary -->
+    <div class="summary">
+
+        <div class="summary-card">
+            <h3>Total Students</h3>
+            <p id="totalStudents">0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Total Classes</h3>
+            <p id="totalClasses">0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Total Present</h3>
+            <p id="totalPresent">0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Total Absent</h3>
+            <p id="totalAbsent">0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Overall Attendance</h3>
+            <p id="overallPercentage">0%</p>
+        </div>
+
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Roll No.</th>
+                    <th>Student Name</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Attendance %</th>
+                    <th>Current Status</th>
+                    <th>Mark Attendance</th>
+                </tr>
+            </thead>
+
+            <tbody id="studentTableBody"></tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script>
+
+    /*
+     * Student Data
+     * Replace these students with your actual student list.
+     */
+
+    const students = [
+        { id: 1, roll: "01", name: "Mahin Vhora" },
+        { id: 2, roll: "02", name: "Student 2" },
+        { id: 3, roll: "03", name: "Student 3" },
+        { id: 4, roll: "04", name: "Student 4" },
+        { id: 5, roll: "05", name: "Student 5" },
+        { id: 6, roll: "06", name: "Student 6" },
+        { id: 7, roll: "07", name: "Student 7" },
+        { id: 8, roll: "08", name: "Student 8" }
+    ];
+
+    /*
+     * Attendance data stored in localStorage.
+     *
+     * Format:
+     *
+     * {
+     *   "2026-09-28": {
+     *      "1": "present",
+     *      "2": "absent"
+     *   }
+     * }
+     */
+
+    let attendance =
+        JSON.parse(localStorage.getItem("attendanceData")) || {};
+
+    const dateInput = document.getElementById("attendanceDate");
+
+    // Set today's date
+    const today = new Date().toISOString().split("T")[0];
+
+    dateInput.value = today;
+
+    dateInput.addEventListener("change", function () {
+        renderTable();
+        updateSummary();
+    });
+
+
+    /*
+     * Get attendance for selected date
+     */
+    function getTodayAttendance() {
+
+        const date = dateInput.value;
+
+        if (!date) {
+            return {};
+        }
+
+        if (!attendance[date]) {
+            attendance[date] = {};
+        }
+
+        return attendance[date];
+    }
+
+
+    /*
+     * Save attendance
+     */
+    function saveAttendance() {
+
+        localStorage.setItem(
+            "attendanceData",
+            JSON.stringify(attendance)
+        );
+
+    }
+
+
+    /*
+     * Mark Present / Absent
+     */
+    function markAttendance(studentId, status) {
+
+        const date = dateInput.value;
+
+        if (!date) {
+            alert("Please select a date.");
+            return;
+        }
+
+        if (!attendance[date]) {
+            attendance[date] = {};
+        }
+
+        /*
+         * Prevent incorrect repeated counting.
+         *
+         * We store only the current status.
+         * Clicking the same status again does not
+         * increase the count.
+         */
+
+        attendance[date][studentId] = status;
+
+        saveAttendance();
+
+        renderTable();
+        updateSummary();
+    }
+
+
+    /*
+     * Get student attendance statistics
+     */
+    function getStudentStats(studentId) {
+
+        let present = 0;
+        let absent = 0;
+
+        Object.keys(attendance).forEach(date => {
+
+            const status = attendance[date][studentId];
+
+            if (status === "present") {
+                present++;
+            }
+
+            if (status === "absent") {
+                absent++;
+            }
+
+        });
+
+        const total = present + absent;
+
+        const percentage =
+            total > 0
+                ? (present / total) * 100
+                : 0;
+
+        return {
+            present,
+            absent,
+            total,
+            percentage
+        };
+    }
+
+
+    /*
+     * Get current selected date status
+     */
+    function getCurrentStatus(studentId) {
+
+        const todayAttendance = getTodayAttendance();
+
+        return todayAttendance[studentId] || "not-marked";
+    }
+
+
+    /*
+     * Render table
+     */
+    function renderTable() {
+
+        const tbody =
+            document.getElementById("studentTableBody");
+
+        const search =
+            document
+                .getElementById("searchInput")
+                .value
+                .toLowerCase()
+                .trim();
+
+        const filter =
+            document.getElementById("filterStatus").value;
+
+        const todayAttendance =
+            getTodayAttendance();
+
+        tbody.innerHTML = "";
+
+        students.forEach(student => {
+
+            const currentStatus =
+                todayAttendance[student.id] || "not-marked";
+
+            const searchableText =
+                `${student.roll} ${student.name}`.toLowerCase();
+
+            /*
+             * Search filter
+             */
+            if (
+                search &&
+                !searchableText.includes(search)
+            ) {
+                return;
+            }
+
+            /*
+             * Status filter
+             */
+            if (
+                filter !== "all" &&
+                currentStatus !== filter
+            ) {
+                return;
+            }
+
+            const stats =
+                getStudentStats(student.id);
+
+            const percentage =
+                stats.percentage.toFixed(2);
+
+            let percentageClass = "good";
+
+            if (stats.percentage < 75) {
+                percentageClass = "low";
+            } else if (stats.percentage < 85) {
+                percentageClass = "average";
+            }
+
+            let statusText = "Not Marked";
+            let statusClass = "not-marked";
+
+            if (currentStatus === "present") {
+                statusText = "Present";
+                statusClass = "present";
+            }
+
+            if (currentStatus === "absent") {
+                statusText = "Absent";
+                statusClass = "absent";
+            }
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+
+                <td>${student.roll}</td>
+
+                <td>
+                    <strong>${student.name}</strong>
+                </td>
+
+                <td>
+                    ${stats.present}
+                </td>
+
+                <td>
+                    ${stats.absent}
+                </td>
+
+                <td>
+                    <span class="percentage ${percentageClass}">
+                        ${percentage}%
+                    </span>
+                </td>
+
+                <td>
+                    <span class="status ${statusClass}">
+                        ${statusText}
+                    </span>
+                </td>
+
+                <td>
+
+                    <div class="attendance-buttons">
+
+                        <button
+                            class="present-btn ${
+                                currentStatus === "present"
+                                    ? "active"
+                                    : ""
+                            }"
+                            onclick="markAttendance(
+                                ${student.id},
+                                'present'
+                            )"
+                        >
+                            🟢 Present
+                        </button>
+
+                        <button
+                            class="absent-btn ${
+                                currentStatus === "absent"
+                                    ? "active"
+                                    : ""
+                            }"
+                            onclick="markAttendance(
+                                ${student.id},
+                                'absent'
+                            )"
+                        >
+                            🔴 Absent
+                        </button>
+
+                    </div>
+
+                </td>
+            `;
+
+            tbody.appendChild(row);
+
+        });
+
+    }
+
+
+    /*
+     * Update Summary
+     */
+    function updateSummary() {
+
+        const totalStudents =
+            students.length;
+
+        /*
+         * Count unique dates that contain
+         * at least one attendance record.
+         */
+        const classDates =
+            Object.keys(attendance)
+                .filter(date =>
+                    Object.keys(attendance[date]).length > 0
+                );
+
+        const totalClasses =
+            classDates.length;
+
+        let totalPresent = 0;
+        let totalAbsent = 0;
+
+        /*
+         * Count all attendance records.
+         */
+        classDates.forEach(date => {
+
+            Object.values(attendance[date])
+                .forEach(status => {
+
+                    if (status === "present") {
+                        totalPresent++;
+                    }
+
+                    if (status === "absent") {
+                        totalAbsent++;
+                    }
+
+                });
+
+        });
+
+        const totalMarked =
+            totalPresent + totalAbsent;
+
+        const overallPercentage =
+            totalMarked > 0
+                ? (totalPresent / totalMarked) * 100
+                : 0;
+
+        document.getElementById("totalStudents")
+            .textContent = totalStudents;
+
+        document.getElementById("totalClasses")
+            .textContent = totalClasses;
+
+        document.getElementById("totalPresent")
+            .textContent = totalPresent;
+
+        document.getElementById("totalAbsent")
+            .textContent = totalAbsent;
+
+        document.getElementById("overallPercentage")
+            .textContent =
+                overallPercentage.toFixed(2) + "%";
+
+    }
+
+
+    /*
+     * Clear attendance for selected date
+     */
+    function clearTodayAttendance() {
+
+        const date = dateInput.value;
+
+        if (!date) {
+            alert("Please select a date.");
+            return;
+        }
+
+        if (
+            !attendance[date] ||
+            Object.keys(attendance[date]).length === 0
+        ) {
+            alert("No attendance found for this date.");
+            return;
+        }
+
+        const confirmation =
+            confirm(
+                "Are you sure you want to clear attendance for " +
+                date +
+                "?"
+            );
+
+        if (!confirmation) {
+            return;
+        }
+
+        delete attendance[date];
+
+        saveAttendance();
+
+        renderTable();
+        updateSummary();
+
+    }
+
+
+    /*
+     * Print attendance
+     */
+    function printAttendance() {
+
+        window.print();
+
+    }
+
+
+    /*
+     * Initial page load
+     */
+    renderTable();
+    updateSummary();
+
+</script>
+
+</body>
+</html>
